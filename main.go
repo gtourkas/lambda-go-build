@@ -2,16 +2,16 @@ package main
 
 import (
 	"fmt"
+	"github.com/go-cmd/cmd"
 	"github.com/nozzle/throttler"
 	"github.com/urfave/cli/v2"
-	"github.com/go-cmd/cmd"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
 )
 
-func build(baseSrcPath string, lambdaSrcPath string, baseDestPath string, debugMode bool)  {
+func build(baseSrcPath string, lambdaSrcPath string, baseDestPath string, debugMode bool) {
 
 	lambdaRelDestPath, _ := filepath.Rel(baseSrcPath, lambdaSrcPath)
 
@@ -23,7 +23,7 @@ func build(baseSrcPath string, lambdaSrcPath string, baseDestPath string, debugM
 		output,
 	}
 	if debugMode {
-		args = append(args, []string{"-gcflags","all=-N -l"}...)
+		args = append(args, []string{"-gcflags", "all=-N -l"}...)
 	}
 
 	args = append(args, lambdaSrcPath)
@@ -32,7 +32,7 @@ func build(baseSrcPath string, lambdaSrcPath string, baseDestPath string, debugM
 	cmd.Dir = filepath.Dir(lambdaSrcPath)
 	cmd.Env = append(os.Environ(), "GOOS=linux", "GOARCH=amd64")
 
-	<- cmd.Start()
+	<-cmd.Start()
 
 	status := cmd.Status()
 	result := "OK"
@@ -54,48 +54,57 @@ func build(baseSrcPath string, lambdaSrcPath string, baseDestPath string, debugM
 func main() {
 
 	app := &cli.App{
-		Authors: []*cli.Author{ {"George Tourkas", "gtourkas at gmail dot com"}},
-		Usage: "Tool for building  Golang AWS Lambdas",
+		Authors:         []*cli.Author{{"George Tourkas", "gtourkas at gmail dot com"}},
+		Usage:           "Tool for building  Golang AWS Lambdas",
 		HideHelpCommand: true,
-		HideHelp: true,
-		Flags: []cli.Flag {
+		HideHelp:        true,
+		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Required: true,
-				Name: "source-path",
-				Aliases: []string{"s"},
-				Usage: "the base path for the lambdas source",
+				Name:     "source-path",
+				Aliases:  []string{"s"},
+				Usage:    "the base path for the lambdas source",
 			},
 			&cli.StringFlag{
 				Required: true,
-				Name: "destination-path",
-				Aliases: []string{"d"},
-				Usage: "the base path for the lambdas built output",
+				Name:     "destination-path",
+				Aliases:  []string{"d"},
+				Usage:    "the base path for the lambdas built output",
 			},
 			&cli.IntFlag{
-				Name: "concurrent-builds",
+				Name:    "concurrent-builds",
 				Aliases: []string{"cb"},
-				Value: 2,
-				Usage: "the number of concurrent build queues",
+				Value:   2,
+				Usage:   "the number of concurrent build queues",
 			},
 			&cli.BoolFlag{
-				Name: "debug-mode",
+				Name:    "debug-mode",
 				Aliases: []string{"dm"},
-				Value: false,
-				Usage: "whether to build for local step-through debugging",
+				Value:   false,
+				Usage:   "whether to build for local step-through debugging",
 			},
 			&cli.StringFlag{
-				Name: "source-path-pattern",
-				Aliases: []string{"spp"},
-				Value: "",
-				Usage: "source path pattern; use to build only a few lambdas",
+				Name:        "source-path-pattern",
+				Aliases:     []string{"spp"},
+				Value:       "",
+				Usage:       "source path pattern; use to build only a few lambdas",
 				DefaultText: "none = build all lambdas",
 			},
 		},
 		Action: func(c *cli.Context) error {
 
-			baseSrcPath := c.String("source-path")
+			var err error
+			var baseSrcPath string
+			baseSrcPath, err = filepath.Abs(c.String("source-path"))
+			if err != nil {
+				panic(err)
+			}
 
-			baseDestPath := c.String("destination-path")
+			var baseDestPath string
+			baseDestPath, err = filepath.Abs(c.String("destination-path"))
+			if err != nil {
+				panic(err)
+			}
 
 			concurBuilds := c.Int("concurrent-builds")
 
@@ -105,7 +114,7 @@ func main() {
 
 			// get paths to lambdas
 			var found []string
-			err := filepath.Walk(baseSrcPath, func(path string, info os.FileInfo, err error) error {
+			err = filepath.Walk(baseSrcPath, func(path string, info os.FileInfo, err error) error {
 				// stop and propagate any walking errors
 				if err != nil {
 					return err
